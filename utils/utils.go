@@ -1,16 +1,15 @@
-package main
+package utils
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/oauth2"
 	"log"
 	"os"
-
-	"golang.org/x/oauth2"
 )
 
-func tokenFromFile(file string) (*oauth2.Token, error) {
+func TokenFromFile(file string) (*oauth2.Token, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, fmt.Errorf("unable to open token file: %v", err)
@@ -24,7 +23,7 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 	return tok, nil
 }
 
-func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
+func GetTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	fmt.Printf("Go to the following link in your browser:\n%v\n", authURL)
 
@@ -41,7 +40,7 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 	return tok
 }
 
-func saveToken(file string, token *oauth2.Token) {
+func SaveToken(file string, token *oauth2.Token) {
 	f, err := os.Create(file)
 	if err != nil {
 		log.Fatalf("Unable to create token file: %v", err)
