@@ -31,12 +31,12 @@ This project is a Telegram bot that monitors a Gmail inbox and sends notificatio
 
 2. **Set Up Credentials**:
    Place your `credentials.json` file**:
-   - Ensure that your `credentials.json` file is located in the `src/credentials` directory. This file contains your OAuth 2.0 credentials from the Google Cloud Console.
+   - Ensure that your `credentials.json` file is located in the `credentials` directory. This file contains your OAuth 2.0 credentials from the Google Cloud Console.
    - The bot uses OAuth 2.0 for authentication. If you haven't created a `credentials.json` file, follow [this guide](https://developers.google.com/identity/protocols/oauth2) to generate one.
 
 3. **Configure Your Environment**:
-   - Place your `token.json` file, which contains the OAuth 2.0 token, in the `src/credentials` directory. If you don't have this file, it will be automatically created when you run the bot for the first time.
-   - Ensure your `config.go` file contains the correct configuration for your bot and that it is placed in the root directory (e.g., `src/config.go`).
+   - Place your `token.json` file, which contains the OAuth 2.0 token, in the `credentials` directory. If you don't have this file, it will be automatically created when you run the bot for the first time.
+   - Ensure your `config.go` file contains the correct configuration for your bot and that it is placed in the root directory (e.g., `config/config.go`).
 
 ## Install Dependencies
 
@@ -51,7 +51,7 @@ go mod tidy
 To start the bot, run the following command:
 
 ```bash
-go run src/main.go
+go run main.go
 ```
 
 ## Usage
@@ -59,7 +59,3 @@ go run src/main.go
 - The bot will start monitoring your Gmail inbox as soon as it is launched.
 - It will send a Telegram message to the specified chat ID for each new email received in the "Primary" inbox.
 - The emails will be marked as read after the notification is sent.
-
-## License
-
-This project is licensed under the MIT License.
