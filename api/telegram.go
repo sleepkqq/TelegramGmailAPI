@@ -16,16 +16,16 @@ import (
 func HandleCheckMail(srv *gmail.Service, bot *tgbotapi.BotAPI, chatID int64) {
 	if err := checkMail(srv, bot); err != nil {
 		log.Printf("Error checking mail: %v", err)
-		sendMessage(bot, chatID, "Failed to check mail.")
+		SendMessage(bot, chatID, "Failed to check mail.")
 	} else {
-		sendMessage(bot, chatID, "Mail checked successfully.")
+		SendMessage(bot, chatID, "Mail checked successfully.")
 	}
 }
 
 func InitiateSendProcess(bot *tgbotapi.BotAPI, chatID int64) {
 	user := models.User{ChatID: chatID, State: config.StateAwaitingRecipient, Data: "{}"}
 	config.DB.Save(&user)
-	sendMessage(bot, chatID, "Please provide the recipient's email address.")
+	SendMessage(bot, chatID, "Please provide the recipient's email address.")
 }
 
 func HandleUserState(srv *gmail.Service, bot *tgbotapi.BotAPI, chatID int64, userMessage string) {
@@ -57,9 +57,9 @@ func HandleUserState(srv *gmail.Service, bot *tgbotapi.BotAPI, chatID int64, use
 	case config.StateAwaitingBody:
 		data["body"] = userMessage
 		if err := sendMail(srv, data["recipient"], data["subject"], data["body"]); err != nil {
-			sendMessage(bot, chatID, fmt.Sprintf("Failed to send email: %v", err))
+			SendMessage(bot, chatID, fmt.Sprintf("Failed to send email: %v", err))
 		} else {
-			sendMessage(bot, chatID, "Email sent successfully!")
+			SendMessage(bot, chatID, "Email sent successfully!")
 		}
 
 		user.State = "completed"
@@ -71,10 +71,10 @@ func HandleUserState(srv *gmail.Service, bot *tgbotapi.BotAPI, chatID int64, use
 		log.Printf("Error updating user: %v", err)
 	}
 
-	sendMessage(bot, chatID, nextPromptMessage(user.State))
+	SendMessage(bot, chatID, nextPromptMessage(user.State))
 }
 
-func sendMessage(bot *tgbotapi.BotAPI, chatID int64, text string) {
+func SendMessage(bot *tgbotapi.BotAPI, chatID int64, text string) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	_, err := bot.Send(msg)
 	if err != nil {

@@ -98,7 +98,7 @@ func checkMail(srv *gmail.Service, bot *tgbotapi.BotAPI) error {
 		}
 
 		messageText := fmt.Sprintf("New message: %s\n%s", subject, msg.Snippet)
-		sendMessage(bot, config.ChatID, messageText)
+		SendMessage(bot, config.ChatID, messageText)
 
 		if err := markAsRead(srv, m.Id); err != nil {
 			return fmt.Errorf("unable to mark message as read: %v", err)

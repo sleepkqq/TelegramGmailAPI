@@ -35,15 +35,17 @@ func main() {
 	for update := range updates {
 		if update.Message != nil {
 			chatID := update.Message.Chat.ID
-			userMessage := update.Message.Text
-
-			switch userMessage {
-			case "/send":
-				api.InitiateSendProcess(bot, chatID)
-			case "/check":
-				api.HandleCheckMail(srv, bot, chatID)
-			default:
-				api.HandleUserState(srv, bot, chatID, userMessage)
+			if update.Message.IsCommand() {
+				switch update.Message.Command() {
+				case "send":
+					api.InitiateSendProcess(bot, chatID)
+				case "check":
+					api.HandleCheckMail(srv, bot, chatID)
+				default:
+					api.SendMessage(bot, update.Message.Chat.ID, "unknown command")
+				}
+			} else {
+				api.HandleUserState(srv, bot, chatID, update.Message.Text)
 			}
 		}
 	}
