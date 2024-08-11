@@ -9,8 +9,13 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
+	db, err := config.InitializeDatabase()
+	if err != nil {
+		log.Fatalf("Unable to initialize database: %v", err)
+	}
+	config.DB = db
 
+	ctx := context.Background()
 	srv, err := api.GetGmailService(ctx)
 	if err != nil {
 		log.Fatalf("Unable to create Gmail service: %v", err)

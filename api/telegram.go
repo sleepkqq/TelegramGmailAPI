@@ -1,18 +1,17 @@
 package api
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"google.golang.org/api/gmail/v1"
 	"log"
 	"telegram-gmail-api/config"
-)
+	"telegram-gmail-api/models"
 
-func InitiateSendProcess(bot *tgbotapi.BotAPI, chatID int64) {
-	config.UserStates[chatID] = config.StateAwaitingRecipient
-	config.UserData[chatID] = make(map[string]string)
-	sendMessage(bot, chatID, "Please provide the recipient's email address.")
-}
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"google.golang.org/api/gmail/v1"
+	"gorm.io/gorm"
+)
 
 func HandleCheckMail(srv *gmail.Service, bot *tgbotapi.BotAPI, chatID int64) {
 	if err := checkMail(srv, bot); err != nil {
@@ -23,38 +22,73 @@ func HandleCheckMail(srv *gmail.Service, bot *tgbotapi.BotAPI, chatID int64) {
 	}
 }
 
+func InitiateSendProcess(bot *tgbotapi.BotAPI, chatID int64) {
+	user := models.User{ChatID: chatID, State: config.StateAwaitingRecipient, Data: "{}"}
+	config.DB.Save(&user)
+	sendMessage(bot, chatID, "Please provide the recipient's email address.")
+}
+
 func HandleUserState(srv *gmail.Service, bot *tgbotapi.BotAPI, chatID int64, userMessage string) {
-	if state, exists := config.UserStates[chatID]; exists {
-		switch state {
-		case config.StateAwaitingRecipient:
-			config.UserData[chatID]["recipient"] = userMessage
-			config.UserStates[chatID] = config.StateAwaitingTitle
-			sendMessage(bot, chatID, "Please provide the email title.")
-
-		case config.StateAwaitingTitle:
-			config.UserData[chatID]["subject"] = userMessage
-			config.UserStates[chatID] = config.StateAwaitingBody
-			sendMessage(bot, chatID, "Please provide the email body.")
-
-		case config.StateAwaitingBody:
-			config.UserData[chatID]["body"] = userMessage
-			err := sendMail(srv, config.UserData[chatID]["recipient"], config.UserData[chatID]["subject"], config.UserData[chatID]["body"])
-			if err != nil {
-				sendMessage(bot, chatID, fmt.Sprintf("Failed to send email: %v", err))
-			} else {
-				sendMessage(bot, chatID, "Email sent successfully!")
-			}
-
-			delete(config.UserStates, chatID)
-			delete(config.UserData, chatID)
+	var user models.User
+	if err := config.DB.Where("chat_id = ?", chatID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			InitiateSendProcess(bot, chatID)
+			return
 		}
+		log.Printf("Error fetching user state: %v", err)
+		return
 	}
+
+	var data map[string]string
+	if err := json.Unmarshal([]byte(user.Data), &data); err != nil {
+		log.Printf("Error unmarshaling user data: %v", err)
+		return
+	}
+
+	switch user.State {
+	case config.StateAwaitingRecipient:
+		data["recipient"] = userMessage
+		user.State = config.StateAwaitingTitle
+
+	case config.StateAwaitingTitle:
+		data["subject"] = userMessage
+		user.State = config.StateAwaitingBody
+
+	case config.StateAwaitingBody:
+		data["body"] = userMessage
+		if err := sendMail(srv, data["recipient"], data["subject"], data["body"]); err != nil {
+			sendMessage(bot, chatID, fmt.Sprintf("Failed to send email: %v", err))
+		} else {
+			sendMessage(bot, chatID, "Email sent successfully!")
+		}
+
+		user.State = "completed"
+	}
+
+	updatedData, _ := json.Marshal(data)
+	user.Data = string(updatedData)
+	if err := config.DB.Save(&user).Error; err != nil {
+		log.Printf("Error updating user: %v", err)
+	}
+
+	sendMessage(bot, chatID, nextPromptMessage(user.State))
 }
 
 func sendMessage(bot *tgbotapi.BotAPI, chatID int64, text string) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	_, err := bot.Send(msg)
 	if err != nil {
-		return
+		log.Printf("Error sending message: %v", err)
+	}
+}
+
+func nextPromptMessage(state string) string {
+	switch state {
+	case config.StateAwaitingTitle:
+		return "Please provide the email title."
+	case config.StateAwaitingBody:
+		return "Please provide the email body."
+	default:
+		return ""
 	}
 }
