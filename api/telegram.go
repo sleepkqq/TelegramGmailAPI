@@ -47,22 +47,22 @@ func HandleUserState(srv *gmail.Service, bot *tgbotapi.BotAPI, chatID int64, use
 
 	switch user.State {
 	case config.StateAwaitingRecipient:
-		data["recipient"] = userMessage
+		data[Recipient] = userMessage
 		user.State = config.StateAwaitingTitle
 
 	case config.StateAwaitingTitle:
-		data["subject"] = userMessage
+		data[Subject] = userMessage
 		user.State = config.StateAwaitingBody
 
 	case config.StateAwaitingBody:
-		data["body"] = userMessage
-		if err := sendMail(srv, data["recipient"], data["subject"], data["body"]); err != nil {
+		data[Body] = userMessage
+		if err := sendMail(srv, data[Recipient], data[Subject], data[Body]); err != nil {
 			SendMessage(bot, chatID, fmt.Sprintf("Failed to send email: %v", err))
 		} else {
 			SendMessage(bot, chatID, "Email sent successfully!")
 		}
 
-		user.State = "completed"
+		user.State = Completed
 	}
 
 	updatedData, _ := json.Marshal(data)
